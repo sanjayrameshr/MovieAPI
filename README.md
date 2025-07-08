@@ -46,4 +46,4 @@ Dependencies
 Author
 	Sanjay Ramesh
 	https://github.com/sanjayrameshr • 
-	(https://www.linkedin.com/in/sanjayrameshr)
+	https://www.linkedin.com/in/sanjayrameshr
