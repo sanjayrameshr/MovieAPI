@@ -24,9 +24,12 @@ class _SearchScreenState extends State<SearchScreen> {
       if (_controller.text.isEmpty && _hasSearched) {
         setState(() {
           _searchResults = [];
-          _hasSearched = false;
+          _hasSearched = false; // Reset to initial state if query is empty
         });
       }
+      // This setState ensures the clear button visibility updates dynamically
+      // as the text field content changes.
+      setState(() {}); 
     });
   }
 
@@ -194,15 +197,15 @@ class _SearchScreenState extends State<SearchScreen> {
                                       height: 120, // Corresponding height
                                       fit: BoxFit.cover,
                                       placeholder: (context, url) => Container(
-                                        width: 80, height: 120,
-                                        color: Colors.grey.shade300,
-                                        child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                                      ),
+                                            width: 80, height: 120,
+                                            color: Colors.grey.shade300,
+                                            child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                                          ),
                                       errorWidget: (context, url, error) => Container(
-                                        width: 80, height: 120,
-                                        color: Colors.grey.shade300,
-                                        child: Center(child: Icon(Icons.image_not_supported, size: 40, color: Colors.grey[500])),
-                                      ),
+                                            width: 80, height: 120,
+                                            color: Colors.grey.shade300,
+                                            child: Center(child: Icon(Icons.image_not_supported, size: 40, color: Colors.grey[500])),
+                                          ),
                                     )
                                   : Container(
                                       width: 80, height: 120,

@@ -15,6 +15,10 @@ class _HomeScreenState extends State<HomeScreen> {
   String _currentMode = 'Popular'; // or TopRated or Search
   bool _isLoading = false;
   final TextEditingController _searchController = TextEditingController();
+  
+  // New variable to track if the current view is a search result
+  // This helps differentiate between an empty initial state and no search results found.
+  bool _isDisplayingSearchResults = false; 
 
   @override
   void initState() {
@@ -22,10 +26,15 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadPopularMovies();
     // Add listener to search controller for clear button visibility
     _searchController.addListener(() {
-      setState(() {
-        // This setState is to rebuild the UI and show/hide the clear icon
-        // No explicit action needed here, just triggers a rebuild.
-      });
+      // This setState ensures the clear button visibility updates dynamically
+      // as the text field content changes.
+      setState(() {}); 
+
+      // If the search bar is cleared by the user, revert to popular movies
+      if (_searchController.text.isEmpty && _isDisplayingSearchResults) {
+        _isDisplayingSearchResults = false; // No longer displaying search results
+        _loadPopularMovies(); // Load popular movies
+      }
     });
   }
 
@@ -40,6 +49,8 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _isLoading = true;
         _currentMode = 'Popular';
+        _isDisplayingSearchResults = false; // Not search results
+        _movies = []; // Clear current movies before loading new ones
       });
       final movies = await ApiService.fetchPopularMovies();
       setState(() {
@@ -56,6 +67,8 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _isLoading = true;
         _currentMode = 'TopRated';
+        _isDisplayingSearchResults = false; // Not search results
+        _movies = []; // Clear current movies before loading new ones
       });
       final movies = await ApiService.fetchTopRatedMovies();
       setState(() {
@@ -68,17 +81,28 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _searchMovies(String query) async {
-    if (query.trim().isEmpty) {
-      // If query is empty, revert to Popular movies (or clear results)
-      _loadPopularMovies();
+    final trimmedQuery = query.trim();
+
+    if (trimmedQuery.isEmpty) {
+      // If query is empty, treat it as clearing the search.
+      setState(() {
+        _movies = [];
+        _isDisplayingSearchResults = false; // No search results to display
+        _isLoading = false;
+        _currentMode = 'Popular'; // Revert to popular mode
+      });
+      _loadPopularMovies(); // Optionally reload popular movies
       return;
     }
+
     try {
       setState(() {
         _isLoading = true;
         _currentMode = 'Search';
+        _isDisplayingSearchResults = true; // Actively displaying search results
+        _movies = []; // Clear previous results immediately
       });
-      final results = await ApiService.searchMovies(query.trim());
+      final results = await ApiService.searchMovies(trimmedQuery);
       setState(() {
         _movies = results;
         _isLoading = false;
@@ -97,23 +121,94 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildMovieGrid() {
-    if (_movies.isEmpty && !_isLoading) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.movie_filter, size: 60, color: Colors.grey[400]),
-            const SizedBox(height: 10),
-            Text(
-              _currentMode == 'Search' && _searchController.text.isNotEmpty
-                  ? 'No results for "${_searchController.text}". Try a different search term!'
-                  : 'No movies found.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-            ),
-          ],
-        ),
-      );
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_movies.isEmpty) {
+      if (_isDisplayingSearchResults && _searchController.text.isNotEmpty) {
+        // No results for a specific search query
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.sentiment_dissatisfied, size: 60, color: Colors.grey[400]),
+              const SizedBox(height: 10),
+              Text(
+                'No results found for "${_searchController.text.trim()}".',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                'Try a different movie title!',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+              ),
+            ],
+          ),
+        );
+      } else if (!_isDisplayingSearchResults && _currentMode == 'Popular') {
+        // No popular movies found (e.g., API error or empty data)
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.movie_filter, size: 60, color: Colors.grey[400]),
+              const SizedBox(height: 10),
+              Text(
+                'No popular movies available at the moment.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                'Check your internet connection or try again later.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+              ),
+            ],
+          ),
+        );
+      } else if (!_isDisplayingSearchResults && _currentMode == 'TopRated') {
+        // No top-rated movies found
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.movie_filter, size: 60, color: Colors.grey[400]),
+              const SizedBox(height: 10),
+              Text(
+                'No top-rated movies available at the moment.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                'Check your internet connection or try again later.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+              ),
+            ],
+          ),
+        );
+      } else {
+        // Initial state or search cleared with no previous category selected
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.search, size: 60, color: Colors.grey[400]),
+              const SizedBox(height: 10),
+              Text(
+                'Search for movies or browse categories above!',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+              ),
+            ],
+          ),
+        );
+      }
     }
 
     return GridView.builder(
@@ -150,7 +245,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Expanded(
                   child: imageUrl != null
                       ? Hero(
-                          tag: movie['id'].toString(),
+                          tag: movie['id'].toString(), // Unique tag for Hero animation
                           child: CachedNetworkImage(
                             imageUrl: imageUrl,
                             fit: BoxFit.cover,
@@ -247,37 +342,20 @@ class _HomeScreenState extends State<HomeScreen> {
                               icon: const Icon(Icons.clear),
                               onPressed: () {
                                 _searchController.clear();
-                                setState(() {
-                                  _movies = []; // Clear current search results
-                                  // Optionally keep _currentMode as 'Search' to show empty state for search
-                                  // or revert to 'Popular' and load popular movies immediately.
-                                  // For a complete clear, let's revert to popular.
-                                  _currentMode = 'Popular';
-                                });
-                                _loadPopularMovies();
+                                // The listener in initState will handle the _isDisplayingSearchResults and _loadPopularMovies
                               },
                             )
-                          : IconButton( // Always show an icon, either search or clear
-                              icon: const Icon(Icons.search),
-                              onPressed: () =>
-                                  _searchMovies(_searchController.text),
-                            ),
+                          : null,
                       border: const OutlineInputBorder(),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 10),
                     ),
+                    textInputAction: TextInputAction.search,
                   ),
                 ),
               ],
             ),
           ),
-
-          const Divider(height: 1, thickness: 1), // Thinner divider
-
-          // Movie Grid or Loading Spinner
           Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _buildMovieGrid(),
+            child: _buildMovieGrid(),
           ),
         ],
       ),

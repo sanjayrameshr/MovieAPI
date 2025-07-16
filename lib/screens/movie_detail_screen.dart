@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart'; 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
 
 class MovieDetailScreen extends StatelessWidget {
@@ -29,6 +29,12 @@ class MovieDetailScreen extends StatelessWidget {
         debugPrint('Error parsing release date: $e');
       }
     }
+
+    // Safely get runtime (assuming 'runtime' key exists in your movie data for full details)
+    // The search results from TMDB usually don't include 'runtime'. You'd need to fetch
+    // movie details using the movie ID if you want runtime here.
+    // For now, we'll display 'N/A' if it's not present.
+    String? runtime = movie['runtime'] != null ? '${movie['runtime']} min' : 'N/A';
 
     return Scaffold(
       body: CustomScrollView(
@@ -117,7 +123,6 @@ class MovieDetailScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Movie Poster
-                      
                       if (imageUrl != null)
                         Hero(
                           tag: movie['id'].toString(),
@@ -174,12 +179,12 @@ class MovieDetailScreen extends StatelessWidget {
                               value: formattedReleaseDate,
                             ),
                             const SizedBox(height: 8),
-                            if (movie['runtime'] != null) // Example for runtime (if available from API)
-                              _buildInfoRow(
-                                icon: Icons.access_time,
-                                label: 'Runtime:',
-                                value: '${movie['runtime']} min',
-                              ),
+                            // Display runtime (will be 'N/A' if not available in initial search data)
+                            _buildInfoRow(
+                              icon: Icons.access_time,
+                              label: 'Runtime:',
+                              value: runtime,
+                            ),
                             const SizedBox(height: 8),
                             // Add more details here if available, e.g., genres, director
                           ],
