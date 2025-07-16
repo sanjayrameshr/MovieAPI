@@ -117,46 +117,42 @@ class MovieDetailScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Movie Poster
+                      
                       if (imageUrl != null)
-                        Hero( // Keep Hero for smooth transition
+                        Hero(
                           tag: movie['id'].toString(),
-                          child: ClipRRect(
+                          child: ClipRRect( // ClipRRect for rounded corners
                             borderRadius: BorderRadius.circular(8),
                             child: CachedNetworkImage(
                               imageUrl: imageUrl,
-                              height: mediaQuery.size.height * 0.25, // Adjusted poster height
-                              width: mediaQuery.size.width * 0.4, // Fixed width for poster
-                              fit: BoxFit.cover,
-                              placeholder: (context, url) => Container(
-                                height: mediaQuery.size.height * 0.25,
+                              // Define explicit width and height for the image container
+                              width: mediaQuery.size.width * 0.4, // Keep the width as a proportion of screen width
+                              height: mediaQuery.size.height * 0.25, // Keep the height as a proportion of screen height
+                              fit: BoxFit.cover, // This is crucial: scale the image to cover the box, cropping if necessary
+                              placeholder: (context, url) => Container( // Placeholder should match dimensions
                                 width: mediaQuery.size.width * 0.4,
+                                height: mediaQuery.size.height * 0.25,
                                 color: Colors.grey.shade300,
                                 child: const Center(child: CircularProgressIndicator()),
                               ),
-                              errorWidget: (context, url, error) => Container(
-                                height: mediaQuery.size.height * 0.25,
+                              errorWidget: (context, url, error) => Container( // Error widget should match dimensions
                                 width: mediaQuery.size.width * 0.4,
+                                height: mediaQuery.size.height * 0.25,
                                 color: Colors.grey.shade300,
-                                child: Center(
-                                  child: Icon(Icons.image_not_supported,
-                                      size: 50, color: Colors.grey[500]),
-                                ),
+                                child: Center(child: Icon(Icons.broken_image, size: 50, color: Colors.grey[500])),
                               ),
                             ),
                           ),
                         )
                       else
-                        Container(
-                          height: mediaQuery.size.height * 0.25,
+                        Container( // Fallback for no image, also define explicit dimensions
                           width: mediaQuery.size.width * 0.4,
+                          height: mediaQuery.size.height * 0.25,
                           decoration: BoxDecoration(
                             color: Colors.grey.shade300,
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: Center(
-                            child: Icon(Icons.image_not_supported,
-                                size: 50, color: Colors.grey[500]),
-                          ),
+                          child: Center(child: Icon(Icons.image_not_supported, size: 50, color: Colors.grey[500])),
                         ),
                       const SizedBox(width: 20),
                       // Details next to poster
