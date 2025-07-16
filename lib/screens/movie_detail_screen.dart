@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart'; 
+import 'package:intl/intl.dart';
 
 class MovieDetailScreen extends StatelessWidget {
   final Map<String, dynamic> movie;
@@ -12,42 +14,241 @@ class MovieDetailScreen extends StatelessWidget {
         ? 'https://image.tmdb.org/t/p/w500${movie['poster_path']}'
         : null;
 
+    final backdropUrl = movie['backdrop_path'] != null
+        ? 'https://image.tmdb.org/t/p/w780${movie['backdrop_path']}'
+        : null;
+
+    // Safely get release date
+    String? releaseDate = movie['release_date'];
+    String formattedReleaseDate = 'N/A';
+    if (releaseDate != null && releaseDate.isNotEmpty) {
+      try {
+        final DateTime parsedDate = DateTime.parse(releaseDate);
+        formattedReleaseDate = DateFormat.yMMMd().format(parsedDate); // e.g., "Jan 1, 2023"
+      } catch (e) {
+        debugPrint('Error parsing release date: $e');
+      }
+    }
+
     return Scaffold(
-      appBar: AppBar(title: Text(movie['title'] ?? 'Movie Details')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (imageUrl != null)
-              Center(
-                child: Image.network(imageUrl, height: mediaQuery.size.height * 0.6, fit: BoxFit.cover),
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            expandedHeight: mediaQuery.size.height * 0.45, // Make header larger
+            floating: false,
+            pinned: true,
+            flexibleSpace: FlexibleSpaceBar(
+              background: Stack(
+                fit: StackFit.expand,
+                children: [
+                  if (backdropUrl != null)
+                    CachedNetworkImage(
+                      imageUrl: backdropUrl,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
+                      errorWidget: (context, url, error) => Container(
+                        color: Colors.grey.shade900,
+                        child: Center(
+                          child: Icon(Icons.broken_image, size: 60, color: Colors.grey[600]),
+                        ),
+                      ),
+                    )
+                  else
+                    Container(
+                      color: Colors.grey.shade900,
+                      child: Center(
+                        child: Icon(Icons.movie, size: 80, color: Colors.grey[600]),
+                      ),
+                    ),
+                  // Dark overlay for better text readability
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withOpacity(0.3),
+                          Colors.black.withOpacity(0.7),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 16,
+                    left: 16,
+                    right: 16,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          movie['title'] ?? 'Movie Details',
+                          style: const TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        if (movie['tagline'] != null && movie['tagline'].toString().isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4.0),
+                            child: Text(
+                              movie['tagline'],
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontStyle: FontStyle.italic,
+                                color: Colors.white.withOpacity(0.8),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-            const SizedBox(height: 20),
-            Text(
-              movie['title'] ?? 'No Title',
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 10),
-            if (movie['vote_average'] != null)
-              Text(
-                'Rating: ${movie['vote_average'].toString()} ⭐',
-                style: const TextStyle(fontSize: 18),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Movie Poster
+                      if (imageUrl != null)
+                        Hero( // Keep Hero for smooth transition
+                          tag: movie['id'].toString(),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: CachedNetworkImage(
+                              imageUrl: imageUrl,
+                              height: mediaQuery.size.height * 0.25, // Adjusted poster height
+                              width: mediaQuery.size.width * 0.4, // Fixed width for poster
+                              fit: BoxFit.cover,
+                              placeholder: (context, url) => Container(
+                                height: mediaQuery.size.height * 0.25,
+                                width: mediaQuery.size.width * 0.4,
+                                color: Colors.grey.shade300,
+                                child: const Center(child: CircularProgressIndicator()),
+                              ),
+                              errorWidget: (context, url, error) => Container(
+                                height: mediaQuery.size.height * 0.25,
+                                width: mediaQuery.size.width * 0.4,
+                                color: Colors.grey.shade300,
+                                child: Center(
+                                  child: Icon(Icons.image_not_supported,
+                                      size: 50, color: Colors.grey[500]),
+                                ),
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        Container(
+                          height: mediaQuery.size.height * 0.25,
+                          width: mediaQuery.size.width * 0.4,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade300,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Center(
+                            child: Icon(Icons.image_not_supported,
+                                size: 50, color: Colors.grey[500]),
+                          ),
+                        ),
+                      const SizedBox(width: 20),
+                      // Details next to poster
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (movie['vote_average'] != null)
+                              _buildInfoRow(
+                                icon: Icons.star_rate_rounded,
+                                label: 'Rating:',
+                                value: '${movie['vote_average'].toStringAsFixed(1)} / 10', // Format to one decimal
+                                valueStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                              ),
+                            const SizedBox(height: 8),
+                            _buildInfoRow(
+                              icon: Icons.calendar_today,
+                              label: 'Release Date:',
+                              value: formattedReleaseDate,
+                            ),
+                            const SizedBox(height: 8),
+                            if (movie['runtime'] != null) // Example for runtime (if available from API)
+                              _buildInfoRow(
+                                icon: Icons.access_time,
+                                label: 'Runtime:',
+                                value: '${movie['runtime']} min',
+                              ),
+                            const SizedBox(height: 8),
+                            // Add more details here if available, e.g., genres, director
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Overview',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  if (movie['overview'] != null && movie['overview'].toString().trim().isNotEmpty)
+                    Text(
+                      movie['overview'],
+                      style: const TextStyle(fontSize: 16, height: 1.5), // Increased line height
+                      textAlign: TextAlign.justify, // Justify text for better readability
+                    )
+                  else
+                    const Text(
+                      'No description available for this movie.',
+                      style: TextStyle(fontSize: 16, fontStyle: FontStyle.italic, color: Colors.grey),
+                    ),
+                  const SizedBox(height: 20),
+                  // You can add more sections here, e.g., Cast, Crew, Trailer
+                  // Example:
+                  // const Text(
+                  //   'Cast',
+                  //   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  // ),
+                  // const SizedBox(height: 8),
+                  // Text('Coming soon...', style: TextStyle(fontStyle: FontStyle.italic)),
+                ],
               ),
-            const SizedBox(height: 10),
-            if (movie['overview'] != null && movie['overview'].toString().trim().isNotEmpty)
-              Text(
-                movie['overview'],
-                style: const TextStyle(fontSize: 16),
-              )
-            else
-              const Text(
-                'No description available.',
-                style: TextStyle(fontSize: 16, fontStyle: FontStyle.italic),
-              ),
-          ],
-        ),
+            ),
+          ),
+        ],
       ),
+    );
+  }
+
+  // Helper widget to build consistent info rows
+  Widget _buildInfoRow({
+    required IconData icon,
+    required String label,
+    required String value,
+    TextStyle labelStyle = const TextStyle(fontSize: 16, color: Colors.grey),
+    TextStyle valueStyle = const TextStyle(fontSize: 16),
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 20, color: Colors.orange), // Accent color for icons
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: labelStyle),
+              Text(value, style: valueStyle),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
